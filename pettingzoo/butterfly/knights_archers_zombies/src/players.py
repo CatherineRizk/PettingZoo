@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from typing import Any
 
+import numpy as np
 import pygame
 
 from pettingzoo.butterfly.knights_archers_zombies.src import constants as const
@@ -18,12 +19,13 @@ from pettingzoo.butterfly.knights_archers_zombies.src.weapons import Arrow, Swor
 class Player(pygame.sprite.Sprite, VectorObservable):
     """Base class for a player's agent."""
 
-    def __init__(self, agent_name: str, image_name: str) -> None:
+    def __init__(self, agent_name: str, image_name: str, continuous_actions: bool = False) -> None:
         """Initialize a Player.
 
         Args:
             agent_name: name of the agent
             image_name: filename of icon for agent
+            continuous_actions: whether the player can make continuous actions
         """
         super().__init__()
         self.agent_name = agent_name
@@ -50,6 +52,9 @@ class Player(pygame.sprite.Sprite, VectorObservable):
         self.timeout: None | Interval = None
 
         self.weapons: pygame.sprite.Group[Any] = pygame.sprite.Group()
+
+        self.continuous_actions = continuous_actions
+        self.action_threshold = 0.5
 
     def is_timed_out(self, action: Actions) -> bool:
         """Return True if the Player is blocked from making the given action.
@@ -82,22 +87,34 @@ class Player(pygame.sprite.Sprite, VectorObservable):
         """
         went_out_of_bounds = False
 
-        if action == Actions.ACTION_FORWARD:
-            self.rect.x += round(self.direction[0] * self.speed)
-            self.rect.y += round(self.direction[1] * self.speed)
-        elif action == Actions.ACTION_BACKWARD:
-            self.rect.x -= round(self.direction[0] * self.speed)
-            self.rect.y -= round(self.direction[1] * self.speed)
-        elif action == Actions.ACTION_TURN_CCW:
-            self.direction = self.direction.rotate(-self.ang_rate)
-            self._update_image()
-        elif action == Actions.ACTION_TURN_CW:
-            self.direction = self.direction.rotate(self.ang_rate)
-            self._update_image()
-        elif action == Actions.ACTION_ATTACK and self.is_alive:
-            self.attack()
-        elif action == Actions.ACTION_NONE:
-            pass
+        if self.continuous_actions:
+            if action == Actions.ACTION_FORWARD:
+                self.rect.x += round(self.direction[0] * self.speed)
+                self.rect.y += round(self.direction[1] * self.speed)
+            elif action == Actions.ACTION_BACKWARD:
+                self.rect.x -= round(self.direction[0] * self.speed)
+                self.rect.y -= round(self.direction[1] * self.speed)
+            elif action == Actions.ACTION_TURN_CCW:
+                self.direction = self.direction.rotate(-self.ang_rate)
+                self._update_image()
+            elif action == Actions.ACTION_TURN_CW:
+                self.direction = self.direction.rotate(self.ang_rate)
+                self._update_image()
+            elif action == Actions.ACTION_ATTACK and self.is_alive:
+                self.attack()
+            elif action == Actions.ACTION_NONE:
+                pass
+        else:
+            if action[3] >= self.action_threshold and self.is_alive:
+                self.attack()
+            elif action[0]>0 or action[1]>0:
+                self.rect.x += round(action[0]*np.cos(action[1]) * self.speed)
+                self.rect.y += round(action[0]*np.sin(action[1]) * self.speed)
+            elif action[2]:
+                self.direction = self.direction.rotate(action[2])
+                self._update_image()
+            else:
+                pass
 
         # Clamp to stay inside the screen
         if self.rect.centery < self.y_top_limit or self.rect.centery > self.y_bot_limit:

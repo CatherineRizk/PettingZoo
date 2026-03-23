@@ -273,6 +273,7 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
         max_cycles: int = 900,
         obs_method: str = "vector",
         render_mode: str | None = None,
+        continuous_actions: bool = True,
     ) -> None:
         """Initialize the environment object.
 
@@ -306,6 +307,7 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
             max_cycles=max_cycles,
             obs_method=obs_method,
             render_mode=render_mode,
+            continuous_actions=continuous_actions,
         )
         if render_mode is not None and render_mode not in self.metadata["render_modes"]:
             raise ValueError(f"render_mode: '{render_mode}' is not supported.")
@@ -317,6 +319,8 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
         # variable state space
         self.sequence_space = self.obs_type == ObsOptions.VECTOR_SEQUENCE
         self.vector_state = self.obs_type != ObsOptions.IMAGE
+
+        self.action_threshold = 0.5
 
         # agents + zombies + weapons
         self.num_tracked = (
@@ -347,6 +351,7 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
         self.num_knights = num_knights
         self.max_zombies = max_zombies
         self.max_arrows = max_arrows
+        self.continuous_actions = continuous_actions
 
         # Represents agents to remove at end of cycle
         self.kill_list: list[AgentID] = []
@@ -698,13 +703,21 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
         self._cumulative_rewards[self.agent_selection] = 0
         agent.score = 0
 
-        agent_action = Actions(action)
+        if not self.continuous_actions:
+            agent_action = Actions(action)
 
-        # archer can't attack if the number of arrows exceeds
-        # the max count. In this case, change the action to no action.
-        if is_archer(agent) and agent_action == Actions.ACTION_ATTACK:
-            if self.num_active_arrows >= self.max_arrows:
-                agent_action = Actions.ACTION_NONE
+            # archer can't attack if the number of arrows exceeds
+            # the max count. In this case, change the action to no action.
+            if is_archer(agent) and agent_action == Actions.ACTION_ATTACK:
+                if self.num_active_arrows >= self.max_arrows:
+                    agent_action = Actions.ACTION_NONE
+
+        else:
+            # archer can't attack if the number of arrows exceeds
+            # the max count. In this case, change the action to no action.
+            if is_archer(agent) and agent_action >= self.action_threshold:
+                if self.num_active_arrows >= self.max_arrows:
+                    agent_action[3] = 0.0  # set attack action to false
 
         if not agent.is_timed_out(agent_action):
             out_of_bounds = agent.act(agent_action)
