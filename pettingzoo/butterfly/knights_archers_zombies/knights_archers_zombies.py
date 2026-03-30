@@ -715,6 +715,7 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
         else:
             # archer can't attack if the number of arrows exceeds
             # the max count. In this case, change the action to no action.
+            agent_action = action
             if is_archer(agent) and agent_action >= self.action_threshold:
                 if self.num_active_arrows >= self.max_arrows:
                     agent_action[3] = 0.0  # set attack action to false
