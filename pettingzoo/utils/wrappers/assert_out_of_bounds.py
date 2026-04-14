@@ -3,7 +3,6 @@ from __future__ import annotations
 from pettingzoo.utils.env import ActionType, AECEnv, AgentID, ObsType
 from pettingzoo.utils.wrappers.base import BaseWrapper
 
-print("IM HEEEERRRRRRRE")
 class AssertOutOfBoundsWrapper(BaseWrapper[AgentID, ObsType, ActionType]):
     """Asserts if the action given to step is outside of the action space."""
 

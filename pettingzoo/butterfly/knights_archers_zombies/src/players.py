@@ -19,7 +19,7 @@ from pettingzoo.butterfly.knights_archers_zombies.src.weapons import Arrow, Swor
 class Player(pygame.sprite.Sprite, VectorObservable):
     """Base class for a player's agent."""
 
-    def __init__(self, agent_name: str, image_name: str, continuous_actions: bool = False) -> None:
+    def __init__(self, agent_name: str, image_name: str, continuous_actions: bool = True) -> None:
         """Initialize a Player.
 
         Args:
@@ -54,7 +54,8 @@ class Player(pygame.sprite.Sprite, VectorObservable):
         self.weapons: pygame.sprite.Group[Any] = pygame.sprite.Group()
 
         self.continuous_actions = continuous_actions
-        self.action_threshold = 0.5
+        self.action_threshold = 2/3
+        self.turn_threshold = 1/3
 
     def is_timed_out(self, action: Actions) -> bool:
         """Return True if the Player is blocked from making the given action.
@@ -88,6 +89,17 @@ class Player(pygame.sprite.Sprite, VectorObservable):
         went_out_of_bounds = False
 
         if self.continuous_actions:
+            if action[3] >= self.action_threshold and self.is_alive:
+                self.attack()
+            elif action[3] < self.action_threshold and action[3] >= self.turn_threshold:
+                self.direction = self.direction.rotate(action[2]*self.ang_rate)
+                self._update_image()
+            elif action[3] < self.turn_threshold:
+                self.rect.x += round(action[0]*np.cos(action[1]) * self.speed)
+                self.rect.y += round(action[0]*np.sin(action[1]) * self.speed)
+            else:
+                pass
+        else:
             if action == Actions.ACTION_FORWARD:
                 self.rect.x += round(self.direction[0] * self.speed)
                 self.rect.y += round(self.direction[1] * self.speed)
@@ -103,17 +115,6 @@ class Player(pygame.sprite.Sprite, VectorObservable):
             elif action == Actions.ACTION_ATTACK and self.is_alive:
                 self.attack()
             elif action == Actions.ACTION_NONE:
-                pass
-        else:
-            if action[3] >= self.action_threshold and self.is_alive:
-                self.attack()
-            elif action[0]>0 or action[1]>0:
-                self.rect.x += round(action[0]*np.cos(action[1]) * self.speed)
-                self.rect.y += round(action[0]*np.sin(action[1]) * self.speed)
-            elif action[2]:
-                self.direction = self.direction.rotate(action[2])
-                self._update_image()
-            else:
                 pass
 
         # Clamp to stay inside the screen
@@ -164,8 +165,12 @@ class Archer(Player):
         Archers are blocked from attacking for a short time after attacking.
         """
         # only the attack action is blocked
-        if action != Actions.ACTION_ATTACK:
-            return False
+        if self.continuous_actions:
+            if action[3] < self.action_threshold:
+                return False
+        else:
+            if action != Actions.ACTION_ATTACK:
+                return False
         return super().is_timed_out(action)
 
     def attack(self) -> None:
