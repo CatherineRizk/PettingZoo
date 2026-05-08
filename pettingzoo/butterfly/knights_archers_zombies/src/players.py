@@ -90,13 +90,13 @@ class Player(pygame.sprite.Sprite, VectorObservable):
 
         if self.continuous_actions:
             if action[3] >= self.action_threshold and self.is_alive:
-                self.attack()
+                self.rect.x += round(action[0]*np.cos(action[1]) * self.speed)
+                self.rect.y += round(action[0]*np.sin(action[1]) * self.speed)
             elif action[3] < self.action_threshold and action[3] >= self.turn_threshold:
                 self.direction = self.direction.rotate(action[2]*self.ang_rate)
                 self._update_image()
             elif action[3] < self.turn_threshold:
-                self.rect.x += round(action[0]*np.cos(action[1]) * self.speed)
-                self.rect.y += round(action[0]*np.sin(action[1]) * self.speed)
+                pass
             else:
                 pass
         else:
@@ -166,7 +166,7 @@ class Archer(Player):
         """
         # only the attack action is blocked
         if self.continuous_actions:
-            if action[3] < self.action_threshold:
+            if action[3] > 1/3:
                 return False
         else:
             if action != Actions.ACTION_ATTACK:

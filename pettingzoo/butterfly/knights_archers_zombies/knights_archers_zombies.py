@@ -320,7 +320,7 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
         self.sequence_space = self.obs_type == ObsOptions.VECTOR_SEQUENCE
         self.vector_state = self.obs_type != ObsOptions.IMAGE
 
-        self.action_threshold = 0.5
+        self.action_threshold = 2/3
 
         # agents + zombies + weapons
         self.num_tracked = (
