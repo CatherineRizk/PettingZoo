@@ -431,8 +431,8 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
     def _build_action_spaces(self) -> dict[AgentID, gymnasium.spaces.Space[Any]]:
         """Create and return the action spaces for the object."""
         if self.continuous_actions:
-            low = np.array([0.0, -np.pi, -1.0, 0.0], dtype=np.float64)
-            high = np.array([1.0, np.pi, 1.0, 1.0], dtype=np.float64)
+            low = np.array([0.0, -np.pi, 0.0], dtype=np.float64)
+            high = np.array([1.0, np.pi, 1.0], dtype=np.float64)
             return {i: Box(low=low, high=high, dtype=np.float64) for i in self.possible_agents}
         if not self.continuous_actions:
             return {i: Discrete(6) for i in self.possible_agents}
@@ -721,9 +721,9 @@ class raw_env(AECEnv[AgentID, ObsType, ActionType], EzPickle):
             # archer can't attack if the number of arrows exceeds
             # the max count. In this case, change the action to no action.
             agent_action = action
-            if is_archer(agent) and agent_action[3] >= self.action_threshold:
+            if is_archer(agent) and agent_action[2] >= self.action_threshold:
                 if self.num_active_arrows >= self.max_arrows:
-                    agent_action[3] = 0.0  # set attack action to false
+                    agent_action[2] = 0.0  # set attack action to false
 
         if not agent.is_timed_out(agent_action):
             out_of_bounds = agent.act(agent_action)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from typing import Any
 
@@ -54,8 +55,7 @@ class Player(pygame.sprite.Sprite, VectorObservable):
         self.weapons: pygame.sprite.Group[Any] = pygame.sprite.Group()
 
         self.continuous_actions = continuous_actions
-        self.action_threshold = 2/3
-        self.turn_threshold = 1/3
+        self.action_threshold = 1/2
 
     def is_timed_out(self, action: Actions) -> bool:
         """Return True if the Player is blocked from making the given action.
@@ -89,14 +89,14 @@ class Player(pygame.sprite.Sprite, VectorObservable):
         went_out_of_bounds = False
 
         if self.continuous_actions:
-            if action[3] >= self.action_threshold and self.is_alive:
-                self.rect.x += round(action[0]*np.cos(action[1]) * self.speed)
-                self.rect.y += round(action[0]*np.sin(action[1]) * self.speed)
-            elif action[3] < self.action_threshold and action[3] >= self.turn_threshold:
-                self.direction = self.direction.rotate(action[2]*self.ang_rate)
+            if action[2] >= self.action_threshold and self.is_alive:
+                self.attack()
+            elif action[2] < self.action_threshold:
+                angle = math.atan2(self.direction.y, self.direction.x)
+                self.rect.x += round(action[0]*np.cos(angle + action[1]) * self.speed)
+                self.rect.y += round(action[0]*np.sin(angle + action[1]) * self.speed)
+                self.direction = self.direction.rotate(action[1])
                 self._update_image()
-            elif action[3] < self.turn_threshold:
-                pass
             else:
                 pass
         else:
@@ -166,7 +166,7 @@ class Archer(Player):
         """
         # only the attack action is blocked
         if self.continuous_actions:
-            if action[3] > 1/3:
+            if action[2] < self.action_threshold:
                 return False
         else:
             if action != Actions.ACTION_ATTACK:
